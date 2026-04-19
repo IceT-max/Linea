@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Linea — Il Gioco</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0f1a;
+      --surface: rgba(255,255,255,0.05);
+      --surface2: rgba(255,255,255,0.1);
+      --border: rgba(255,255,255,0.12);
+      --accent1: #7c5cbf;
+      --accent2: #4fa3e0;
+      --x-color: #f06292;
+      --o-color: #4dd0e1;
+      --text: #e8e8f0;
+      --muted: #8888aa;
+      --radius: 16px;
+      --cell-gap: 8px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    /* Animated background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 20% 20%, rgba(124,92,191,0.25) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 80%, rgba(79,163,224,0.2) 0%, transparent 55%),
+        radial-gradient(ellipse at 50% 50%, rgba(240,98,146,0.08) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 700px;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    /* ──────────── LOGO ──────────── */
+    .logo {
+      text-align: center;
+    }
+    .logo h1 {
+      font-size: clamp(2.4rem, 8vw, 3.6rem);
+      font-weight: 800;
+      letter-spacing: -1px;
+      background: linear-gradient(135deg, var(--x-color), var(--accent1), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .logo p {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-top: 4px;
+    }
+
+    /* ──────────── CARD ──────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      width: 100%;
+      backdrop-filter: blur(16px);
+    }
+
+    /* ──────────── SCREENS ──────────── */
+    .screen { display: none; flex-direction: column; align-items: center; gap: 20px; width: 100%; }
+    .screen.active { display: flex; }
+
+    /* ──────────── MENU ──────────── */
+    .section-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--muted);
+      align-self: flex-start;
+    }
+
+    .level-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      width: 100%;
+    }
+
+    .level-btn {
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+      color: var(--text);
+    }
+    .level-btn:hover, .level-btn.selected {
+      border-color: var(--accent1);
+      background: rgba(124,92,191,0.2);
+      transform: translateY(-2px);
+    }
+    .level-btn .grid-size { font-size: 1.5rem; font-weight: 700; }
+    .level-btn .grid-desc { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+
+    .mode-row {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+    .mode-btn {
+      flex: 1;
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: var(--text);
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .mode-btn:hover, .mode-btn.selected {
+      border-color: var(--accent2);
+      background: rgba(79,163,224,0.15);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent1), var(--accent2));
+      border: none;
+      border-radius: 12px;
+      padding: 14px 40px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+      letter-spacing: 0.5px;
+    }
+    .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 18px;
+      font-size: 0.85rem;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-ghost:hover { border-color: var(--text); color: var(--text); }
+
+    /* ──────────── GAME SCREEN ──────────── */
+    .game-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+    .game-info { font-size: 0.85rem; color: var(--muted); }
+    .game-info strong { color: var(--text); }
+
+    .status-bar {
+      width: 100%;
+      text-align: center;
+      font-size: 1.05rem;
+      font-weight: 600;
+      min-height: 32px;
+      transition: color 0.3s;
+    }
+    .status-bar.x-turn { color: var(--x-color); }
+    .status-bar.o-turn { color: var(--o-color); }
+    .status-bar.draw   { color: var(--muted); }
+    .status-bar.x-win  { color: var(--x-color); }
+    .status-bar.o-win  { color: var(--o-color); }
+
+    /* ──────────── SCOREBOARD ──────────── */
+    .scoreboard {
+      display: flex;
+      gap: 12px;
+      width: 100%;
+    }
+    .score-box {
+      flex: 1;
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .score-box .player-name { font-size: 0.8rem; }
+    .score-box .player-name span { font-weight: 700; }
+    .score-box .score-val { font-size: 1.5rem; font-weight: 800; }
+    .score-x .player-name span { color: var(--x-color); }
+    .score-x .score-val { color: var(--x-color); }
+    .score-o .player-name span { color: var(--o-color); }
+    .score-o .score-val { color: var(--o-color); }
+    .score-draw .player-name span { color: var(--muted); }
+    .score-draw .score-val { color: var(--muted); }
+
+    /* ──────────── GRID ──────────── */
+    .board-wrap {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+    .board {
+      display: grid;
+      gap: var(--cell-gap);
+    }
+
+    .cell {
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s, border-color 0.15s;
+      font-size: 1.8rem;
+      font-weight: 900;
+      line-height: 1;
+      user-select: none;
+      position: relative;
+      overflow: hidden;
+    }
+    .cell:hover:not(.taken) {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.28);
+      transform: scale(1.05);
+    }
+    .cell.taken { cursor: default; }
+    .cell.x { color: var(--x-color); }
+    .cell.o { color: var(--o-color); }
+    .cell.winning {
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(255,255,255,0.45);
+      animation: pulse 0.6s ease-in-out infinite alternate;
+    }
+    .cell.winning.x { border-color: var(--x-color); background: rgba(240,98,146,0.18); }
+    .cell.winning.o { border-color: var(--o-color); background: rgba(77,208,225,0.18); }
+
+    @keyframes pulse {
+      from { transform: scale(1); }
+      to   { transform: scale(1.08); }
+    }
+
+    .cell .mark {
+      display: block;
+      animation: popIn 0.2s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    @keyframes popIn {
+      from { transform: scale(0) rotate(-20deg); opacity: 0; }
+      to   { transform: scale(1) rotate(0deg);  opacity: 1; }
+    }
+
+    /* AI thinking indicator */
+    .thinking {
+      font-size: 0.8rem;
+      color: var(--muted);
+      height: 16px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .thinking-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--muted);
+      animation: bounce 0.6s ease-in-out infinite;
+    }
+    .thinking-dot:nth-child(2) { animation-delay: 0.1s; }
+    .thinking-dot:nth-child(3) { animation-delay: 0.2s; }
+    @keyframes bounce {
+      0%,100% { transform: translateY(0); }
+      50%      { transform: translateY(-4px); }
+    }
+
+    .game-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    /* ──────────── MODAL ──────────── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.2s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    .modal-card {
+      background: #1a1a2e;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 40px 36px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      max-width: 340px;
+      width: 90%;
+      animation: slideUp 0.25s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    @keyframes slideUp {
+      from { transform: translateY(40px) scale(0.92); opacity: 0; }
+      to   { transform: translateY(0)    scale(1);    opacity: 1; }
+    }
+    .modal-icon  { font-size: 3.2rem; line-height: 1; }
+    .modal-title {
+      font-size: 1.7rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    .modal-title.x-win  { color: var(--x-color); }
+    .modal-title.o-win  { color: var(--o-color); }
+    .modal-title.draw   { color: var(--muted); }
+    .modal-subtitle { font-size: 0.9rem; color: var(--muted); }
+    .modal-actions  { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; justify-content: center; }
+
+    /* ──────────── HIGHSCORE ──────────── */
+    .hs-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      width: 100%;
+    }
+    .hs-item {
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .hs-left { display: flex; flex-direction: column; gap: 2px; }
+    .hs-label { font-size: 0.75rem; color: var(--muted); }
+    .hs-sublabel { font-size: 0.7rem; color: var(--muted); opacity: 0.7; }
+    .hs-value { font-size: 1.25rem; font-weight: 800; color: var(--accent2); white-space: nowrap; }
+    .hs-value.empty { font-size: 0.8rem; font-weight: 400; color: var(--muted); }
+    .hs-new {
+      display: inline-block;
+      background: linear-gradient(135deg, var(--accent1), var(--accent2));
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 20px;
+      margin-top: 4px;
+    }
+    .btn-reset-hs {
+      font-size: 0.78rem;
+      padding: 6px 14px;
+      align-self: flex-end;
+    }
+
+    /* ──────────── RESPONSIVE ──────────── */
+    @media (max-width: 480px) {
+      .card { padding: 18px; }
+      .level-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .level-btn { padding: 14px 8px; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="logo">
+    <h1>LINEA</h1>
+    <p>Il gioco del tris in quattro dimensioni</p>
+  </div>
+
+  <!-- ═══ MENU ═══ -->
+  <div class="card" id="menuCard">
+    <div id="menuScreen" class="screen active">
+
+      <span class="section-label">Scegli la griglia</span>
+
+      <div class="level-grid">
+        <button class="level-btn selected" data-size="3" onclick="selectSize(3,this)">
+          <div class="grid-size">3 × 3</div>
+          <div class="grid-desc">Classico — allinea 3</div>
+        </button>
+        <button class="level-btn" data-size="4" onclick="selectSize(4,this)">
+          <div class="grid-size">4 × 4</div>
+          <div class="grid-desc">Sfida — allinea 4</div>
+        </button>
+        <button class="level-btn" data-size="5" onclick="selectSize(5,this)">
+          <div class="grid-size">5 × 5</div>
+          <div class="grid-desc">Avanzato — allinea 5</div>
+        </button>
+        <button class="level-btn" data-size="6" onclick="selectSize(6,this)">
+          <div class="grid-size">6 × 6</div>
+          <div class="grid-desc">Esperto — allinea 6</div>
+        </button>
+      </div>
+
+      <span class="section-label">Modalità di gioco</span>
+
+      <div class="mode-row">
+        <button class="mode-btn selected" data-mode="pvp" onclick="selectMode('pvp',this)">
+          👥 Due giocatori
+        </button>
+        <button class="mode-btn" data-mode="ai" onclick="selectMode('ai',this)">
+          🤖 Vs Computer
+        </button>
+      </div>
+
+      <span class="section-label">Migliori risultati</span>
+
+      <div class="hs-grid" id="hsGrid"></div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+        <span style="font-size:0.72rem;color:var(--muted);">Mosse totali alla vittoria</span>
+        <button class="btn-ghost btn-reset-hs" onclick="resetHighscores()">🗑 Azzera record</button>
+      </div>
+
+      <button class="btn-primary" onclick="startGame()">Inizia Partita</button>
+
+    </div>
+  </div>
+
+  <!-- ═══ GAME ═══ -->
+  <div class="card" id="gameCard" style="display:none;">
+    <div id="gameScreen" class="screen active">
+
+      <div class="game-header">
+        <div class="game-info">
+          Griglia <strong id="infoSize"></strong> &bull; <strong id="infoMode"></strong>
+        </div>
+        <button class="btn-ghost" onclick="backToMenu()">← Menu</button>
+      </div>
+
+      <div class="scoreboard">
+        <div class="score-box score-x">
+          <div class="player-name"><span>✕</span><br/><span id="nameX">Giocatore 1</span></div>
+          <div class="score-val" id="scoreX">0</div>
+        </div>
+        <div class="score-box score-draw">
+          <div class="player-name"><span>—</span><br/>Pareggi</div>
+          <div class="score-val" id="scoreDraw">0</div>
+        </div>
+        <div class="score-box score-o">
+          <div class="score-val" id="scoreO">0</div>
+          <div class="player-name" style="text-align:right;"><span>○</span><br/><span id="nameO">Giocatore 2</span></div>
+        </div>
+      </div>
+
+      <div class="status-bar x-turn" id="statusBar">Turno di ✕</div>
+
+      <div id="thinkingBar" class="thinking" style="visibility:hidden;">
+        <div class="thinking-dot"></div>
+        <div class="thinking-dot"></div>
+        <div class="thinking-dot"></div>
+        <span style="margin-left:4px;">Computer sta pensando…</span>
+      </div>
+
+      <div class="board-wrap">
+        <div class="board" id="board"></div>
+      </div>
+
+      <div class="game-actions">
+        <button class="btn-ghost" onclick="resetGame()">↺ Nuova partita</button>
+        <button class="btn-ghost" onclick="backToMenu()">← Cambia modalità</button>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══ MODAL RISULTATO ═══ -->
+<div id="resultModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card">
+    <div class="modal-icon"     id="modalIcon"></div>
+    <div class="modal-title"    id="modalTitle"></div>
+    <div class="modal-subtitle" id="modalSubtitle"></div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="closeModalReset()">↺ Rivincita</button>
+      <button class="btn-ghost"   onclick="closeModalMenu()">← Menu</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+let gridSize = 3;
+let winLen   = 3;   // cells in a row needed to win
+let gameMode = 'pvp'; // 'pvp' | 'ai'
+
+let board      = [];
+let current    = 'x';
+let gameOver   = false;
+let scores     = { x: 0, o: 0, draw: 0 };
+let aiThinking = false;
+let moveCount  = 0;
+
+const WIN_LENGTHS = { 3: 3, 4: 4, 5: 5, 6: 6 };
+
+// ═══════════════════════════════════════════════
+//  MENU
+// ═══════════════════════════════════════════════
+function selectSize(size, el) {
+  document.querySelectorAll('.level-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  gridSize = size;
+}
+
+function selectMode(mode, el) {
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  gameMode = mode;
+}
+
+function startGame() {
+  winLen = WIN_LENGTHS[gridSize];
+  document.getElementById('menuCard').style.display = 'none';
+  document.getElementById('gameCard').style.display = '';
+  document.getElementById('infoSize').textContent = gridSize + '×' + gridSize;
+  document.getElementById('infoMode').textContent = gameMode === 'ai' ? 'Vs Computer' : 'Due giocatori';
+  document.getElementById('nameX').textContent = 'Giocatore 1';
+  document.getElementById('nameO').textContent = gameMode === 'ai' ? 'Computer' : 'Giocatore 2';
+  scores = { x: 0, o: 0, draw: 0 };
+  updateScoreboard();
+  renderHighscores();
+  resetGame();
+}
+
+function backToMenu() {
+  gameOver = true;
+  aiThinking = false;
+  document.getElementById('gameCard').style.display = 'none';
+  document.getElementById('menuCard').style.display = '';
+}
+
+// ═══════════════════════════════════════════════
+//  GAME LOGIC
+// ═══════════════════════════════════════════════
+function resetGame() {
+  board = Array(gridSize * gridSize).fill('');
+  current = 'x';
+  gameOver = false;
+  aiThinking = false;
+  moveCount = 0;
+  renderBoard();
+  setStatus('x-turn', 'Turno di ✕');
+  document.getElementById('thinkingBar').style.visibility = 'hidden';
+}
+
+function renderBoard() {
+  const el = document.getElementById('board');
+  const cardWidth = Math.min(window.innerWidth, 700) - 32 - 56; // container padding + card padding
+  const cellPx = Math.min(Math.floor((cardWidth - (gridSize - 1) * 8) / gridSize), 88);
+  el.style.gridTemplateColumns = `repeat(${gridSize}, ${cellPx}px)`;
+  el.style.gridTemplateRows    = `repeat(${gridSize}, ${cellPx}px)`;
+  el.innerHTML = '';
+  for (let i = 0; i < gridSize * gridSize; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell' + (board[i] ? ' taken ' + board[i] : '');
+    cell.dataset.index = i;
+    if (board[i]) {
+      const mark = document.createElement('span');
+      mark.className = 'mark';
+      mark.textContent = board[i] === 'x' ? '✕' : '○';
+      cell.appendChild(mark);
+    }
+    cell.addEventListener('click', () => onCellClick(i));
+    el.appendChild(cell);
+  }
+}
+
+function onCellClick(idx) {
+  if (gameOver || board[idx] || aiThinking) return;
+  if (gameMode === 'ai' && current === 'o') return;
+  makeMove(idx);
+}
+
+function makeMove(idx) {
+  board[idx] = current;
+  moveCount++;
+  renderBoard();
+
+  const winning = checkWin(board, current, gridSize, winLen);
+  if (winning) {
+    highlightWin(winning);
+    setStatus(current + '-win', current === 'x' ? '✕ Vince!' : '○ Vince!');
+    scores[current]++;
+    updateScoreboard();
+    gameOver = true;
+    const playerName = current === 'x'
+      ? 'Giocatore 1'
+      : (gameMode === 'ai' ? 'Computer' : 'Giocatore 2');
+    const isRecord = saveHighscore(moveCount);
+    setTimeout(() => showModal(
+      current === 'x' ? 'x-win' : 'o-win',
+      current === 'x' ? '🎉' : (gameMode === 'ai' ? '🤖' : '🎉'),
+      playerName + ' vince!',
+      moveCount + ' mosse' + (isRecord ? ' — Nuovo record! 🏆' : '')
+    ), 400);
+    return;
+  }
+  if (board.every(c => c !== '')) {
+    setStatus('draw', 'Pareggio!');
+    scores.draw++;
+    updateScoreboard();
+    gameOver = true;
+    setTimeout(() => showModal('draw', '🤝', 'Pareggio!', 'Nessun giocatore è riuscito ad allineare ' + winLen + ' in fila.'), 300);
+    return;
+  }
+
+  current = current === 'x' ? 'o' : 'x';
+  setStatus(current + '-turn', `Turno di ${current === 'x' ? '✕' : '○'}`);
+
+  if (gameMode === 'ai' && current === 'o' && !gameOver) {
+    aiThinking = true;
+    document.getElementById('thinkingBar').style.visibility = 'visible';
+    setTimeout(doAiMove, 300 + Math.random() * 200);
+  }
+}
+
+function doAiMove() {
+  document.getElementById('thinkingBar').style.visibility = 'hidden';
+  aiThinking = false;
+  if (gameOver) return;
+  const idx = gridSize === 3 ? minimaxMove() : heuristicMove();
+  makeMove(idx);
+}
+
+// ═══════════════════════════════════════════════
+//  WIN CHECK
+// ═══════════════════════════════════════════════
+function checkWin(b, player, size, wl) {
+  const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (b[r*size+c] !== player) continue;
+      for (const [dr,dc] of dirs) {
+        let cells = [[r,c]];
+        for (let k = 1; k < wl; k++) {
+          const nr = r + dr*k, nc = c + dc*k;
+          if (nr < 0 || nr >= size || nc < 0 || nc >= size) break;
+          if (b[nr*size+nc] !== player) break;
+          cells.push([nr,nc]);
+        }
+        if (cells.length === wl) return cells;
+      }
+    }
+  }
+  return null;
+}
+
+function highlightWin(cells) {
+  const boardEl = document.getElementById('board');
+  const allCells = boardEl.querySelectorAll('.cell');
+  cells.forEach(([r,c]) => {
+    const idx = r * gridSize + c;
+    allCells[idx].classList.add('winning');
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  AI — MINIMAX (3×3 only)
+// ═══════════════════════════════════════════════
+function minimaxMove() {
+  let best = -Infinity, bestIdx = -1;
+  for (let i = 0; i < board.length; i++) {
+    if (board[i]) continue;
+    board[i] = 'o';
+    const score = minimax(board, 0, false, -Infinity, Infinity);
+    board[i] = '';
+    if (score > best) { best = score; bestIdx = i; }
+  }
+  return bestIdx;
+}
+
+function minimax(b, depth, isMax, alpha, beta) {
+  if (checkWin(b, 'o', gridSize, winLen)) return 10 - depth;
+  if (checkWin(b, 'x', gridSize, winLen)) return depth - 10;
+  if (b.every(c => c)) return 0;
+
+  if (isMax) {
+    let best = -Infinity;
+    for (let i = 0; i < b.length; i++) {
+      if (b[i]) continue;
+      b[i] = 'o';
+      best = Math.max(best, minimax(b, depth+1, false, alpha, beta));
+      b[i] = '';
+      alpha = Math.max(alpha, best);
+      if (beta <= alpha) break;
+    }
+    return best;
+  } else {
+    let best = Infinity;
+    for (let i = 0; i < b.length; i++) {
+      if (b[i]) continue;
+      b[i] = 'x';
+      best = Math.min(best, minimax(b, depth+1, true, alpha, beta));
+      b[i] = '';
+      beta = Math.min(beta, best);
+      if (beta <= alpha) break;
+    }
+    return best;
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  AI — HEURISTIC (4×4, 5×5, 6×6)
+// ═══════════════════════════════════════════════
+function heuristicMove() {
+  const empty = board.map((v,i) => v === '' ? i : -1).filter(i => i >= 0);
+
+  // 1. Win immediately
+  for (const i of empty) {
+    board[i] = 'o';
+    if (checkWin(board, 'o', gridSize, winLen)) { board[i] = ''; return i; }
+    board[i] = '';
+  }
+  // 2. Block opponent win
+  for (const i of empty) {
+    board[i] = 'x';
+    if (checkWin(board, 'x', gridSize, winLen)) { board[i] = ''; return i; }
+    board[i] = '';
+  }
+
+  // 3. Score each empty cell
+  let bestScore = -Infinity, bestIdx = empty[0];
+  for (const i of empty) {
+    const score = cellHeuristic(i);
+    if (score > bestScore) { bestScore = score; bestIdx = i; }
+  }
+  return bestIdx;
+}
+
+function cellHeuristic(idx) {
+  const r = Math.floor(idx / gridSize);
+  const c = idx % gridSize;
+  let score = 0;
+
+  // Prefer center
+  const center = (gridSize - 1) / 2;
+  score -= Math.abs(r - center) + Math.abs(c - center);
+
+  // Check potential in all directions
+  const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+  for (const [dr,dc] of dirs) {
+    score += lineScore(r, c, dr, dc, 'o') * 3;
+    score += lineScore(r, c, dr, dc, 'x') * 2;
+  }
+  return score;
+}
+
+function lineScore(r, c, dr, dc, player) {
+  let count = 0, open = 0;
+  for (const dir of [1, -1]) {
+    let nr = r + dr*dir, nc = c + dc*dir;
+    while (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
+      if (board[nr*gridSize+nc] === player) { count++; nr += dr*dir; nc += dc*dir; }
+      else if (board[nr*gridSize+nc] === '') { open++; break; }
+      else break;
+    }
+  }
+  if (count + open < winLen - 1) return 0;
+  return count * count + open;
+}
+
+// ═══════════════════════════════════════════════
+//  UI HELPERS
+// ═══════════════════════════════════════════════
+function setStatus(cls, text) {
+  const el = document.getElementById('statusBar');
+  el.className = 'status-bar ' + cls;
+  el.textContent = text;
+}
+
+function updateScoreboard() {
+  document.getElementById('scoreX').textContent    = scores.x;
+  document.getElementById('scoreO').textContent    = scores.o;
+  document.getElementById('scoreDraw').textContent = scores.draw;
+}
+
+window.addEventListener('resize', () => { if (!gameOver || board.some(c => c)) renderBoard(); });
+window.addEventListener('DOMContentLoaded', renderHighscores);
+
+// ═══════════════════════════════════════════════
+//  MODAL
+// ═══════════════════════════════════════════════
+function showModal(cls, icon, title, subtitle) {
+  const modal = document.getElementById('resultModal');
+  document.getElementById('modalIcon').textContent     = icon;
+  document.getElementById('modalTitle').textContent    = title;
+  document.getElementById('modalTitle').className      = 'modal-title ' + cls;
+  document.getElementById('modalSubtitle').textContent = subtitle;
+  modal.style.display = 'flex';
+}
+
+// ═══════════════════════════════════════════════
+//  HIGHSCORE
+// ═══════════════════════════════════════════════
+function hsKey() { return gridSize + '_' + gameMode; }
+
+function loadHighscores() {
+  try { return JSON.parse(localStorage.getItem('linea_hs') || '{}'); } catch { return {}; }
+}
+
+function saveHighscore(moves) {
+  const hs = loadHighscores();
+  const key = hsKey();
+  if (!hs[key] || moves < hs[key].moves) {
+    hs[key] = { moves, date: new Date().toLocaleDateString('it-IT') };
+    localStorage.setItem('linea_hs', JSON.stringify(hs));
+    renderHighscores();
+    return true;
+  }
+  return false;
+}
+
+function resetHighscores() {
+  if (!confirm('Vuoi davvero azzerare tutti i record?')) return;
+  localStorage.removeItem('linea_hs');
+  renderHighscores();
+}
+
+function renderHighscores() {
+  const hs = loadHighscores();
+  const grid = document.getElementById('hsGrid');
+  if (!grid) return;
+  const sizes = [3, 4, 5, 6];
+  const modes = [{ key: 'pvp', label: '👥 PvP' }, { key: 'ai', label: '🤖 vs AI' }];
+  grid.innerHTML = '';
+  for (const { key: mKey, label: mLabel } of modes) {
+    for (const sz of sizes) {
+      const k = sz + '_' + mKey;
+      const rec = hs[k];
+      const item = document.createElement('div');
+      item.className = 'hs-item';
+      item.innerHTML = `
+        <div class="hs-left">
+          <span class="hs-label">${sz}×${sz} ${mLabel}</span>
+          ${rec ? `<span class="hs-sublabel">${rec.date}</span>` : ''}
+        </div>
+        ${rec
+          ? `<span class="hs-value">${rec.moves} <span style="font-size:0.7rem;font-weight:400;color:var(--muted)">mosse</span></span>`
+          : `<span class="hs-value empty">—</span>`}
+      `;
+      grid.appendChild(item);
+    }
+  }
+}
+
+function closeModalReset() {
+  document.getElementById('resultModal').style.display = 'none';
+  resetGame();
+}
+
+function closeModalMenu() {
+  document.getElementById('resultModal').style.display = 'none';
+  backToMenu();
+}
+</script>
+</body>
+</html>
