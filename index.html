@@ -619,6 +619,7 @@ function backToMenu() {
   aiThinking = false;
   document.getElementById('gameCard').style.display = 'none';
   document.getElementById('menuCard').style.display = '';
+  renderHighscores();
 }
 
 // ═══════════════════════════════════════════════
@@ -676,7 +677,7 @@ function makeMove(idx) {
     updateScoreboard();
     gameOver = true;
     pendingWinner = current;
-    pendingMoves  = moveCount;
+    pendingMoves  = current === 'x' ? Math.ceil(moveCount / 2) : Math.floor(moveCount / 2);
     const humanWon = gameMode === 'pvp' || current === 'x';
     setTimeout(() => {
       if (humanWon) {
