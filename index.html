@@ -680,6 +680,7 @@ function onCellClick(idx) {
 function makeMove(idx) {
   board[idx] = current;
   moveCount++;
+  playTick(current);
   renderBoard();
 
   const winning = checkWin(board, current, gridSize, winLen);
@@ -692,6 +693,7 @@ function makeMove(idx) {
     pendingWinner = current;
     pendingMoves  = current === 'x' ? Math.ceil(moveCount / 2) : Math.floor(moveCount / 2);
     const humanWon = gameMode === 'pvp' || current === 'x';
+    playFanfare();
     setTimeout(() => {
       if (humanWon) {
         showInitialsModal();
@@ -706,6 +708,7 @@ function makeMove(idx) {
     scores.draw++;
     updateScoreboard();
     gameOver = true;
+    playDraw();
     setTimeout(() => showModal('draw', '🤝', 'Pareggio!', 'Nessun giocatore è riuscito ad allineare ' + winLen + ' in fila.'), 300);
     return;
   }
@@ -881,6 +884,67 @@ function updateScoreboard() {
 }
 
 window.addEventListener('resize', () => { if (!gameOver || board.some(c => c)) renderBoard(); });
+
+// ═══════════════════════════════════════════════
+//  AUDIO
+// ═══════════════════════════════════════════════
+let _actx = null;
+function actx() {
+  if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
+  if (_actx.state === 'suspended') _actx.resume();
+  return _actx;
+}
+
+function playTick(player) {
+  const ctx = actx();
+  const osc  = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.type = 'sine';
+  const freq = player === 'x' ? 600 : 420;
+  osc.frequency.setValueAtTime(freq, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(freq * 0.8, ctx.currentTime + 0.07);
+  gain.gain.setValueAtTime(0.28, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.09);
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + 0.09);
+}
+
+function playFanfare() {
+  const ctx = actx();
+  const notes = [523, 659, 784, 1047]; // C5 E5 G5 C6
+  notes.forEach((freq, i) => {
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'triangle';
+    const t = ctx.currentTime + i * 0.13;
+    osc.frequency.setValueAtTime(freq, t);
+    gain.gain.setValueAtTime(0.28, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+    osc.start(t);
+    osc.stop(t + 0.22);
+  });
+}
+
+function playDraw() {
+  const ctx = actx();
+  [440, 370].forEach((freq, i) => {
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    const t = ctx.currentTime + i * 0.22;
+    osc.frequency.setValueAtTime(freq, t);
+    gain.gain.setValueAtTime(0.2, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+    osc.start(t);
+    osc.stop(t + 0.3);
+  });
+}
 window.addEventListener('DOMContentLoaded', () => {
   renderHighscores();
   // Auto-avanzamento tra gli slot iniziali
