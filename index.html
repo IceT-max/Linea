@@ -537,6 +537,19 @@
 
 </div>
 
+<!-- ═══ MODAL CONFERMA RESET ═══ -->
+<div id="resetModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card">
+    <div class="modal-icon">🗑</div>
+    <div class="modal-title" style="color:var(--muted)">Azzera record</div>
+    <div class="modal-subtitle">Tutti i record verranno cancellati. Sei sicuro?</div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="confirmReset()">Sì, azzera</button>
+      <button class="btn-ghost"   onclick="document.getElementById('resetModal').style.display='none'">Annulla</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ MODAL INIZIALI ═══ -->
 <div id="initialsModal" class="modal-overlay" style="display:none;">
   <div class="modal-card">
@@ -965,7 +978,11 @@ function saveHighscore(initials, moves) {
 }
 
 function resetHighscores() {
-  if (!confirm('Vuoi davvero azzerare tutti i record?')) return;
+  document.getElementById('resetModal').style.display = 'flex';
+}
+
+function confirmReset() {
+  document.getElementById('resetModal').style.display = 'none';
   localStorage.removeItem('linea_hs');
   renderHighscores();
 }
