@@ -456,10 +456,10 @@
       <span class="section-label">Modalità di gioco</span>
 
       <div class="mode-row">
-        <button class="mode-btn selected" data-mode="pvp" onclick="selectMode('pvp',this)">
+        <button class="mode-btn" data-mode="pvp" onclick="selectMode('pvp',this)">
           👥 Due giocatori
         </button>
-        <button class="mode-btn" data-mode="ai" onclick="selectMode('ai',this)">
+        <button class="mode-btn selected" data-mode="ai" onclick="selectMode('ai',this)">
           🤖 Vs Computer
         </button>
       </div>
@@ -587,7 +587,7 @@
 // ═══════════════════════════════════════════════
 let gridSize = 3;
 let winLen   = 3;   // cells in a row needed to win
-let gameMode = 'pvp'; // 'pvp' | 'ai'
+let gameMode = 'ai'; // 'pvp' | 'ai'
 
 let board      = [];
 let current    = 'x';
