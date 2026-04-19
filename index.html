@@ -359,41 +359,58 @@
     .modal-actions  { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; justify-content: center; }
 
     /* ──────────── HIGHSCORE ──────────── */
-    .hs-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-      width: 100%;
-    }
-    .hs-item {
+    .hs-tabs { display: flex; gap: 6px; width: 100%; }
+    .hs-tab {
+      flex: 1;
       background: var(--surface2);
-      border-radius: 10px;
-      padding: 10px 14px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-    }
-    .hs-left { display: flex; flex-direction: column; gap: 2px; }
-    .hs-label { font-size: 0.75rem; color: var(--muted); }
-    .hs-sublabel { font-size: 0.7rem; color: var(--muted); opacity: 0.7; }
-    .hs-value { font-size: 1.25rem; font-weight: 800; color: var(--accent2); white-space: nowrap; }
-    .hs-value.empty { font-size: 0.8rem; font-weight: 400; color: var(--muted); }
-    .hs-new {
-      display: inline-block;
-      background: linear-gradient(135deg, var(--accent1), var(--accent2));
-      color: #fff;
-      font-size: 0.7rem;
-      font-weight: 700;
-      padding: 2px 7px;
-      border-radius: 20px;
-      margin-top: 4px;
-    }
-    .btn-reset-hs {
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 4px;
       font-size: 0.78rem;
-      padding: 6px 14px;
-      align-self: flex-end;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
     }
+    .hs-tab.active {
+      border-color: var(--accent1);
+      color: var(--text);
+      background: rgba(124,92,191,0.2);
+    }
+    .hs-list { width: 100%; display: flex; flex-direction: column; gap: 6px; min-height: 60px; }
+    .hs-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 8px 12px;
+    }
+    .hs-rank     { font-size: 1rem; width: 26px; text-align: center; flex-shrink: 0; }
+    .hs-initials { font-size: 1.05rem; font-weight: 800; letter-spacing: 3px; color: var(--accent2); flex: 1; }
+    .hs-moves    { font-size: 0.85rem; color: var(--text); font-weight: 600; white-space: nowrap; }
+    .hs-date     { font-size: 0.7rem; color: var(--muted); white-space: nowrap; }
+    .hs-empty    { text-align: center; color: var(--muted); font-size: 0.85rem; padding: 16px 0; width: 100%; }
+    .btn-reset-hs { font-size: 0.78rem; padding: 6px 14px; }
+
+    /* ──────────── INITIALS INPUT ──────────── */
+    .initials-slots { display: flex; gap: 10px; margin: 4px 0; }
+    .initial-slot {
+      width: 58px; height: 70px;
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      font-size: 2.2rem;
+      font-weight: 900;
+      text-align: center;
+      color: var(--text);
+      text-transform: uppercase;
+      outline: none;
+      transition: border-color 0.15s;
+      caret-color: transparent;
+    }
+    .initial-slot:focus { border-color: var(--accent1); }
+    .initials-hint { font-size: 0.82rem; color: var(--muted); }
 
     /* ──────────── RESPONSIVE ──────────── */
     @media (max-width: 480px) {
@@ -449,10 +466,20 @@
 
       <span class="section-label">Migliori risultati</span>
 
-      <div class="hs-grid" id="hsGrid"></div>
+      <div class="hs-tabs" id="hsSizeTabs">
+        <button class="hs-tab active" onclick="setHsView(3,'size',this)">3×3</button>
+        <button class="hs-tab"        onclick="setHsView(4,'size',this)">4×4</button>
+        <button class="hs-tab"        onclick="setHsView(5,'size',this)">5×5</button>
+        <button class="hs-tab"        onclick="setHsView(6,'size',this)">6×6</button>
+      </div>
+      <div class="hs-tabs" id="hsModeTabs">
+        <button class="hs-tab active" onclick="setHsView('pvp','mode',this)">👥 PvP</button>
+        <button class="hs-tab"        onclick="setHsView('ai','mode',this)">🤖 vs AI</button>
+      </div>
 
-      <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
-        <span style="font-size:0.72rem;color:var(--muted);">Mosse totali alla vittoria</span>
+      <div class="hs-list" id="hsGrid"></div>
+
+      <div style="display:flex;justify-content:flex-end;width:100%;">
         <button class="btn-ghost btn-reset-hs" onclick="resetHighscores()">🗑 Azzera record</button>
       </div>
 
@@ -508,6 +535,24 @@
     </div>
   </div>
 
+</div>
+
+<!-- ═══ MODAL INIZIALI ═══ -->
+<div id="initialsModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card">
+    <div class="modal-icon">🏆</div>
+    <div class="modal-title" style="color:var(--accent2)">Inserisci le iniziali</div>
+    <div class="initials-hint">3 lettere, stile arcade</div>
+    <div class="initials-slots">
+      <input class="initial-slot" id="i0" maxlength="1" />
+      <input class="initial-slot" id="i1" maxlength="1" />
+      <input class="initial-slot" id="i2" maxlength="1" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="confirmInitials()">Conferma</button>
+      <button class="btn-ghost"   onclick="skipInitials()">Salta</button>
+    </div>
+  </div>
 </div>
 
 <!-- ═══ MODAL RISULTATO ═══ -->
@@ -630,16 +675,16 @@ function makeMove(idx) {
     scores[current]++;
     updateScoreboard();
     gameOver = true;
-    const playerName = current === 'x'
-      ? 'Giocatore 1'
-      : (gameMode === 'ai' ? 'Computer' : 'Giocatore 2');
-    const isRecord = saveHighscore(moveCount);
-    setTimeout(() => showModal(
-      current === 'x' ? 'x-win' : 'o-win',
-      current === 'x' ? '🎉' : (gameMode === 'ai' ? '🤖' : '🎉'),
-      playerName + ' vince!',
-      moveCount + ' mosse' + (isRecord ? ' — Nuovo record! 🏆' : '')
-    ), 400);
+    pendingWinner = current;
+    pendingMoves  = moveCount;
+    const humanWon = gameMode === 'pvp' || current === 'x';
+    setTimeout(() => {
+      if (humanWon) {
+        showInitialsModal();
+      } else {
+        showModal('o-win', '🤖', 'Computer vince!', pendingMoves + ' mosse totali');
+      }
+    }, 400);
     return;
   }
   if (board.every(c => c !== '')) {
@@ -822,72 +867,31 @@ function updateScoreboard() {
 }
 
 window.addEventListener('resize', () => { if (!gameOver || board.some(c => c)) renderBoard(); });
-window.addEventListener('DOMContentLoaded', renderHighscores);
+window.addEventListener('DOMContentLoaded', () => {
+  renderHighscores();
+  // Auto-avanzamento tra gli slot iniziali
+  ['i0','i1','i2'].forEach((id, idx) => {
+    const el = document.getElementById(id);
+    el.addEventListener('input', () => {
+      el.value = el.value.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0,1);
+      if (el.value && idx < 2) document.getElementById(['i0','i1','i2'][idx+1]).focus();
+    });
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !el.value && idx > 0)
+        document.getElementById(['i0','i1','i2'][idx-1]).focus();
+    });
+  });
+});
 
 // ═══════════════════════════════════════════════
-//  MODAL
+//  MODAL RISULTATO
 // ═══════════════════════════════════════════════
 function showModal(cls, icon, title, subtitle) {
-  const modal = document.getElementById('resultModal');
   document.getElementById('modalIcon').textContent     = icon;
   document.getElementById('modalTitle').textContent    = title;
   document.getElementById('modalTitle').className      = 'modal-title ' + cls;
   document.getElementById('modalSubtitle').textContent = subtitle;
-  modal.style.display = 'flex';
-}
-
-// ═══════════════════════════════════════════════
-//  HIGHSCORE
-// ═══════════════════════════════════════════════
-function hsKey() { return gridSize + '_' + gameMode; }
-
-function loadHighscores() {
-  try { return JSON.parse(localStorage.getItem('linea_hs') || '{}'); } catch { return {}; }
-}
-
-function saveHighscore(moves) {
-  const hs = loadHighscores();
-  const key = hsKey();
-  if (!hs[key] || moves < hs[key].moves) {
-    hs[key] = { moves, date: new Date().toLocaleDateString('it-IT') };
-    localStorage.setItem('linea_hs', JSON.stringify(hs));
-    renderHighscores();
-    return true;
-  }
-  return false;
-}
-
-function resetHighscores() {
-  if (!confirm('Vuoi davvero azzerare tutti i record?')) return;
-  localStorage.removeItem('linea_hs');
-  renderHighscores();
-}
-
-function renderHighscores() {
-  const hs = loadHighscores();
-  const grid = document.getElementById('hsGrid');
-  if (!grid) return;
-  const sizes = [3, 4, 5, 6];
-  const modes = [{ key: 'pvp', label: '👥 PvP' }, { key: 'ai', label: '🤖 vs AI' }];
-  grid.innerHTML = '';
-  for (const { key: mKey, label: mLabel } of modes) {
-    for (const sz of sizes) {
-      const k = sz + '_' + mKey;
-      const rec = hs[k];
-      const item = document.createElement('div');
-      item.className = 'hs-item';
-      item.innerHTML = `
-        <div class="hs-left">
-          <span class="hs-label">${sz}×${sz} ${mLabel}</span>
-          ${rec ? `<span class="hs-sublabel">${rec.date}</span>` : ''}
-        </div>
-        ${rec
-          ? `<span class="hs-value">${rec.moves} <span style="font-size:0.7rem;font-weight:400;color:var(--muted)">mosse</span></span>`
-          : `<span class="hs-value empty">—</span>`}
-      `;
-      grid.appendChild(item);
-    }
-  }
+  document.getElementById('resultModal').style.display = 'flex';
 }
 
 function closeModalReset() {
@@ -898,6 +902,104 @@ function closeModalReset() {
 function closeModalMenu() {
   document.getElementById('resultModal').style.display = 'none';
   backToMenu();
+}
+
+// ═══════════════════════════════════════════════
+//  MODAL INIZIALI
+// ═══════════════════════════════════════════════
+let pendingWinner = '';
+let pendingMoves  = 0;
+let hsViewSize    = 3;
+let hsViewMode    = 'pvp';
+
+function showInitialsModal() {
+  ['i0','i1','i2'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('initialsModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('i0').focus(), 50);
+}
+
+function confirmInitials() {
+  const letters = ['i0','i1','i2'].map(id => document.getElementById(id).value.trim() || '_');
+  const initials = letters.join('').toUpperCase();
+  document.getElementById('initialsModal').style.display = 'none';
+  finishWin(initials);
+}
+
+function skipInitials() {
+  document.getElementById('initialsModal').style.display = 'none';
+  finishWin(null);
+}
+
+function finishWin(initials) {
+  const cls        = pendingWinner === 'x' ? 'x-win' : 'o-win';
+  const icon       = '🎉';
+  const playerName = pendingWinner === 'x' ? 'Giocatore 1' : 'Giocatore 2';
+  let subtitle     = pendingMoves + ' mosse';
+  if (initials) {
+    const pos = saveHighscore(initials, pendingMoves);
+    if (pos !== null) subtitle += ` — ${pos}° in classifica! 🏆`;
+  }
+  showModal(cls, icon, playerName + ' vince!', subtitle);
+}
+
+// ═══════════════════════════════════════════════
+//  HIGHSCORE
+// ═══════════════════════════════════════════════
+function loadHighscores() {
+  try { return JSON.parse(localStorage.getItem('linea_hs') || '{}'); } catch { return {}; }
+}
+
+function saveHighscore(initials, moves) {
+  const hs   = loadHighscores();
+  const key  = gridSize + '_' + gameMode;
+  const list = hs[key] || [];
+  if (list.length >= 5 && moves >= list[list.length - 1].moves) return null;
+  const entry = { initials, moves, date: new Date().toLocaleDateString('it-IT') };
+  list.push(entry);
+  list.sort((a, b) => a.moves - b.moves);
+  hs[key] = list.slice(0, 5);
+  localStorage.setItem('linea_hs', JSON.stringify(hs));
+  renderHighscores();
+  return hs[key].findIndex(e => e === entry) + 1;
+}
+
+function resetHighscores() {
+  if (!confirm('Vuoi davvero azzerare tutti i record?')) return;
+  localStorage.removeItem('linea_hs');
+  renderHighscores();
+}
+
+function setHsView(val, type, el) {
+  if (type === 'size') {
+    hsViewSize = val;
+    document.querySelectorAll('#hsSizeTabs .hs-tab').forEach(b => b.classList.remove('active'));
+  } else {
+    hsViewMode = val;
+    document.querySelectorAll('#hsModeTabs .hs-tab').forEach(b => b.classList.remove('active'));
+  }
+  el.classList.add('active');
+  renderHighscores();
+}
+
+function renderHighscores() {
+  const hs   = loadHighscores();
+  const key  = hsViewSize + '_' + hsViewMode;
+  const list = hs[key] || [];
+  const el   = document.getElementById('hsGrid');
+  if (!el) return;
+  const medals = ['🥇','🥈','🥉','4°','5°'];
+  if (list.length === 0) {
+    el.innerHTML = '<div class="hs-empty">Nessun record — sii il primo!</div>';
+    return;
+  }
+  el.innerHTML = list.map((e, i) => `
+    <div class="hs-row">
+      <span class="hs-rank">${medals[i]}</span>
+      <span class="hs-initials">${e.initials}</span>
+      <span class="hs-moves">${e.moves} mosse</span>
+      <span class="hs-date">${e.date}</span>
+    </div>
+  `).join('');
 }
 </script>
 </body>
